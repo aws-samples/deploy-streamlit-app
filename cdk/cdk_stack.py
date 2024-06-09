@@ -3,6 +3,7 @@ from aws_cdk import (
     Stack,
     aws_ec2 as ec2,
     aws_ecs as ecs,
+    aws_ecr_assets as ecr_assets,
     aws_iam as iam,
     aws_cognito as cognito,
     aws_secretsmanager as secretsmanager,
@@ -17,6 +18,7 @@ from docker_app.config_file import Config
 
 CUSTOM_HEADER_NAME = "X-Custom-Header"
 
+
 class CdkStack(Stack):
 
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
@@ -29,24 +31,26 @@ class CdkStack(Stack):
         user_pool = cognito.UserPool(self, f"{prefix}UserPool")
 
         # Create Cognito client
-        user_pool_client = cognito.UserPoolClient(self, f"{prefix}UserPoolClient",
-                                                  user_pool=user_pool,
-                                                  generate_secret=True
-                                                  )
+        user_pool_client = cognito.UserPoolClient(
+            self, f"{prefix}UserPoolClient", user_pool=user_pool, generate_secret=True
+        )
 
         # Store Cognito parameters in a Secrets Manager secret
-        secret = secretsmanager.Secret(self, f"{prefix}ParamCognitoSecret",
-                                       secret_object_value={
-                                           "pool_id": SecretValue.unsafe_plain_text(user_pool.user_pool_id),
-                                           "app_client_id": SecretValue.unsafe_plain_text(user_pool_client.user_pool_client_id),
-                                           "app_client_secret": user_pool_client.user_pool_client_secret
-                                       },
-                                       # This secret name should be identical
-                                       # to the one defined in the Streamlit
-                                       # container
-                                       secret_name=Config.SECRETS_MANAGER_ID
-                                       )
-
+        secret = secretsmanager.Secret(
+            self,
+            f"{prefix}ParamCognitoSecret",
+            secret_object_value={
+                "pool_id": SecretValue.unsafe_plain_text(user_pool.user_pool_id),
+                "app_client_id": SecretValue.unsafe_plain_text(
+                    user_pool_client.user_pool_client_id
+                ),
+                "app_client_secret": user_pool_client.user_pool_client_secret,
+            },
+            # This secret name should be identical
+            # to the one defined in the Streamlit
+            # container
+            secret_name=Config.SECRETS_MANAGER_ID,
+        )
 
         # VPC for ALB and ECS cluster
         vpc = ec2.Vpc(
@@ -80,10 +84,8 @@ class CdkStack(Stack):
 
         # ECS cluster and service definition
         cluster = ecs.Cluster(
-            self,
-            f"{prefix}Cluster",
-            enable_fargate_capacity_providers=True,
-            vpc=vpc)
+            self, f"{prefix}Cluster", enable_fargate_capacity_providers=True, vpc=vpc
+        )
 
         # ALB to connect to ECS
         alb = elbv2.ApplicationLoadBalancer(
@@ -104,16 +106,17 @@ class CdkStack(Stack):
         )
 
         # Build Dockerfile from local folder and push to ECR
-        image = ecs.ContainerImage.from_asset('docker_app')
+        image = ecs.ContainerImage.from_asset(
+            "docker_app", platform=ecr_assets.Platform.LINUX_AMD64
+        )
 
         fargate_task_definition.add_container(
             f"{prefix}WebContainer",
             # Use an image from DockerHub
             image=image,
             port_mappings=[
-                ecs.PortMapping(
-                    container_port=8501,
-                    protocol=ecs.Protocol.TCP)],
+                ecs.PortMapping(container_port=8501, protocol=ecs.Protocol.TCP)
+            ],
             logging=ecs.LogDrivers.aws_logs(stream_prefix="WebContainerLogs"),
         )
 
@@ -125,18 +128,18 @@ class CdkStack(Stack):
             service_name=f"{prefix}-stl-front",
             security_groups=[ecs_security_group],
             vpc_subnets=ec2.SubnetSelection(
-                subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
+                subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+            ),
         )
 
         # Grant access to Bedrock
-        bedrock_policy = iam.Policy(self, f"{prefix}BedrockPolicy",
-                                    statements=[
-                                        iam.PolicyStatement(
-                                            actions=["bedrock:InvokeModel"],
-                                            resources=["*"]
-                                        )
-                                    ]
-                                    )
+        bedrock_policy = iam.Policy(
+            self,
+            f"{prefix}BedrockPolicy",
+            statements=[
+                iam.PolicyStatement(actions=["bedrock:InvokeModel"], resources=["*"])
+            ],
+        )
         task_role = fargate_task_definition.task_role
         task_role.attach_inline_policy(bedrock_policy)
 
@@ -177,8 +180,9 @@ class CdkStack(Stack):
             priority=1,
             conditions=[
                 elbv2.ListenerCondition.http_header(
-                    CUSTOM_HEADER_NAME,
-                    [Config.CUSTOM_HEADER_VALUE])],
+                    CUSTOM_HEADER_NAME, [Config.CUSTOM_HEADER_VALUE]
+                )
+            ],
             protocol=elbv2.ApplicationProtocol.HTTP,
             targets=[service],
         )
@@ -194,8 +198,8 @@ class CdkStack(Stack):
         )
 
         # Output CloudFront URL
-        CfnOutput(self, "CloudFrontDistributionURL",
-                  value=cloudfront_distribution.domain_name)
+        CfnOutput(
+            self, "CloudFrontDistributionURL", value=cloudfront_distribution.domain_name
+        )
         # Output Cognito pool id
-        CfnOutput(self, "CognitoPoolId",
-                  value=user_pool.user_pool_id)
+        CfnOutput(self, "CognitoPoolId", value=user_pool.user_pool_id)
