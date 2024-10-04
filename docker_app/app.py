@@ -8,8 +8,11 @@ from config_file import Config
 # ID of Secrets Manager containing cognito parameters
 secrets_manager_id = Config.SECRETS_MANAGER_ID
 
+# ID of the AWS region in which Secrets Manager is deployed
+region = Config.DEPLOYMENT_REGION
+
 # Initialise CognitoAuthenticator
-authenticator = Auth.get_authenticator(secrets_manager_id)
+authenticator = Auth.get_authenticator(secrets_manager_id, region)
 
 # Authenticate user, and stop here if not logged in
 is_logged_in = authenticator.login()
@@ -32,7 +35,7 @@ st.title("Generative AI Application")
 input_sent = st.text_input("Input Sentence", "Say Hello World! in Spanish, French and Japanese.")
 
 # Create the large language model object
-llm = Llm()
+llm = Llm(Config.BEDROCK_REGION)
 
 # When there is an input text to process
 if input_sent:
