@@ -12,3 +12,10 @@ class Config:
     # with the same name. Change this value if you destroy your stack and need
     # to recreate it with the same STACK_NAME.
     SECRETS_MANAGER_ID = f"{STACK_NAME}ParamCognitoSecret12345"
+
+    # AWS region in which you want to deploy the cdk stack
+    DEPLOYMENT_REGION = "us-east-1"
+
+    # If Bedrock is not activated in us-east-1 in your account, set this value
+    # accordingly
+    BEDROCK_REGION = "us-east-1"

@@ -4,13 +4,11 @@ import json
 
 class Llm:
 
-    def __init__(self):
+    def __init__(self, bedrock_region):
         # Create Bedrock client
         bedrock_client = boto3.client(
             'bedrock-runtime',
-            # If Bedrock is not activated in us-east-1 in your account, set this value
-            # accordingly
-            region_name='us-east-1',
+            region_name=bedrock_region,
         )
         self.bedrock_client = bedrock_client
 
