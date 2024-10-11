@@ -26,11 +26,12 @@ In the main folder, you will find a cdk template to deploy the app on ECS / ALB.
 
 Prerequisites:
 
-* python3.8
+* python >= 3.8
 * docker
 * use a Chrome browser for development
 * `anthropic.claude-v2` model activated in Amazon Bedrock in your AWS account
-* the environment used to create this demo was an AWS Cloud9 m5.large instance with Amazon Linux 2023, but it should also work with other configurations
+* the environment used to create this demo was an AWS Cloud9 m5.large instance with Amazon Linux 2023, but it should also work with other configurations. It has also been tested on a mac laptop with colima as container runtime.
+* You also need to install the AWS Command Line Interface (CLI), the AWS Cloud Development KIT (CDK), and to configure the AWS CLI on your development environment (not required if you use Cloud9, as it is already configured by default). One way to configure the AWS CLI is to get your access key through the AWS console, and use the `aws configure` command in your terminal to setup your credentials.
 
 To deploy:
 
